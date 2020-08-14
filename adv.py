@@ -1,6 +1,7 @@
 from room import Room
 from player import Player
 from world import World
+from util import Queue
 
 import random
 from ast import literal_eval
@@ -28,6 +29,78 @@ player = Player(world.starting_room)
 # Fill this out with directions to walk
 # traversal_path = ['n', 'n']
 traversal_path = []
+traversal_graph = {}
+traversal_grid = []
+rooms_set = set([v.id for k, v in world.rooms.items()])
+visited_rooms = set()
+
+for _ in range(len(world.room_grid)):
+    traversal_grid.append([0] * len(world.room_grid))
+
+
+current_room = player.current_room
+
+q = Queue()
+q.enqueue(current_room.get_exits())
+path = []
+random_move = ""
+room_id = -1
+finished = False
+
+while q.size() > 0 and not finished:
+    visited_rooms.add(player.current_room.id)
+    if not len(rooms_set.difference(visited_rooms)):
+        break
+    moves = q.dequeue()
+
+    if player.current_room.id not in traversal_graph:
+        traversal_graph[player.current_room.id] = {}
+        for move in moves:
+            traversal_graph[player.current_room.id][move] = '?'
+
+    if random_move == 'w':
+        traversal_graph[player.current_room.id]['e'] = room_id
+    elif random_move == 'e':
+        traversal_graph[player.current_room.id]['w'] = room_id
+    elif random_move == 's':
+        traversal_graph[player.current_room.id]['n'] = room_id
+    elif random_move == 'n':
+        traversal_graph[player.current_room.id]['s'] = room_id
+    
+    room_id = player.current_room.id
+    moves = [move for move in moves if traversal_graph[room_id][move] == '?']
+
+    if len(moves):
+        random_move = random.choice(moves)
+        if traversal_graph[room_id][random_move] == '?':
+            player.travel(random_move)
+            visited_rooms.add(player.current_room.id)
+            x, y = player.current_room.get_coords()
+            traversal_grid[x][y] += 1
+            path.append(random_move)
+            traversal_path.append(random_move)
+            traversal_graph[room_id][random_move] = player.current_room.id
+            
+            q.enqueue(player.current_room.get_exits())
+    else:
+        if len(path):
+            random_move = ""
+            while not len([value for key, value in traversal_graph[player.current_room.id].items() if value == "?"]) and len(path):
+                move = path.pop()
+                if move == 'w':
+                    move = 'e'
+                elif move == 'e':
+                    move = 'w'
+                elif move == 's':
+                    move = 'n'
+                elif move == 'n':
+                    move = 's'
+                player.travel(move)
+                visited_rooms.add(player.current_room.id)
+                x, y = player.current_room.get_coords()
+                traversal_grid[x][y] += 1
+                traversal_path.append(move)
+            q.enqueue(player.current_room.get_exits())
 
 
 
